@@ -1,12 +1,27 @@
 (require '[org.httpkit.server :as srv]
+         '[clojure.java.browse :as browse]
          '[clojure.core.match :refer [match]]
          '[clojure.string :as str]
          '[hiccup.core :as h])
 
 (import '[java.net URLDecoder])
 
-(def todos (atom [{:id 1 :name "Taste htmx" :done true}
-                  {:id 2 :name "Buy a unicorn" :done false}]))
+(def port 3000)
+
+(def todos (atom (sorted-map 1 {:id 1 :name "Taste Htmx with Babashka" :done true}
+                             2 {:id 2 :name "Buy a unicorn" :done false})))
+
+(def todos-id (atom (count @todos)))
+
+(defn add-todo! [name]
+  (let [id (swap! todos-id inc)]
+    (swap! todos assoc id {:id id :name name :done false})))
+
+(defn toggle-todo! [id]
+  (swap! todos update-in [(Integer. id) :done] not))
+
+(defn remove-todo! [id]
+  (swap! todos dissoc (Integer. id)))
 
 (defn find-todo [id todos-list]
   (first (filter #(= (Integer. id) (:id %)) todos-list)))
@@ -26,7 +41,7 @@
     [:button.destroy {:hx-delete (str "/todos/" id)
                       :_ (str "on htmx:afterOnLoad remove #todo-" id)}]]])
 
-(defn template [body]
+(defn template []
   {:status 200
    :body
    (str
@@ -42,25 +57,33 @@
       [:section.todoapp
        [:header.header
         [:h1 "todos"]
-        body]
+        [:form {:hx-post "/todos"
+                :hx-target "#todo-list"
+                :hx-swap "afterbegin"
+                :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
+         [:input#txtTodo.new-todo {:name "todo"
+                                   :placeholder "What needs to be done?"
+                                   :autofocus ""}]]]
        [:section.main
+
         [:input#toggle-all.toggle-all {:type "checkbox"}]
         [:label {:for "toggle-all"} "Mark all as complete"]]
        [:ul#todo-list.todo-list
         (for [todo @todos]
-          (todo-item todo))]]]))})
+          (todo-item (val todo)))]]]))})
 
-(defn home-page []
-  [:form {:hx-post "/todos"
-          :hx-target "#todo-list"
-          :hx-swap "afterbegin"
-          :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
-   [:input#txtTodo.new-todo {:name "todo"
-                             :placeholder "What needs to be done?"
-                             :autofocus ""}]])
+(defn add-item [req]
+  (let [name (-> req
+                 :body
+                 slurp
+                 (str/split #"=")
+                 second
+                 URLDecoder/decode)
+        todo (add-todo! name)]
+    (h/html (todo-item (val (last todo))))))
 
 (defn edit-item [id]
-  (let [{:keys [id name]} (find-todo id @todos)]
+  (let [{:keys [id name]} (get @todos (Integer. id))]
     (h/html
      [:form {:hx-post (str"/todos/update/" id)}
       [:input.edit {:type "text"
@@ -68,34 +91,36 @@
                     :value name}]])))
 
 (defn update-item [req id]
-  (let [todo (find-todo id @todos)
-        name (-> req
+  (let [name (-> req
                  :body
                  slurp
                  (str/split #"=")
                  second
-                 URLDecoder/decode)]
-    (swap! todos assoc-in [(dec (Integer. id)) :name] name)
-    (h/html (todo-item (assoc todo :name name)))))
+                 URLDecoder/decode)
+        todo (swap! todos assoc-in [(Integer. id) :name] name)]
+    (h/html (todo-item (get todo (Integer. id))))))
 
-(defn patch-item [id]
-  (let [todo (find-todo id @todos)]
-    (swap! todos update-in [(dec (Integer. id)) :done] not)
-    (h/html (todo-item (update todo :done not)))))
+(defn patch-item
+  [id]
+  (let [todo (toggle-todo! id)]
+    (h/html (todo-item (get todo (Integer. id))))))
 
 (defn delete-item [id]
-  (swap! todos (fn [x] (remove #(= (:id %) (Integer. id)) x))))
-
+  (remove-todo! id))
 
 (defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
     (match [request-method path]
-           [:get []] (template (home-page))
+           [:get []] (template)
            [:get ["todos" "edit" id]] {:body (edit-item id)}
+           [:post ["todos"]] {:body (add-item req)}
            [:post ["todos" "update" id]] {:body (update-item req id)}
            [:patch ["todos" id]] {:body (patch-item id)}
            [:delete ["todos" id]] {:body (delete-item id)}
            :else {:status 404 :body "Error 404: Page not found"})))
 
-(srv/run-server #'routes {:port 3000})
-;; @(promise)
+(let [url (str "http://localhost:" port "/")]
+  (srv/run-server #'routes {:port port})
+  (println "serving" url)
+  (browse/browse-url url)
+  @(promise))
