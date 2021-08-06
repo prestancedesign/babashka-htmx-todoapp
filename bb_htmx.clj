@@ -3,6 +3,23 @@
          '[clojure.string :as str]
          '[hiccup.core :as h])
 
+(def todos (atom [{:id 1 :name "Taste htmx" :done true}
+                  {:id 2 :name "Buy a unicorn" :done false}]))
+
+(defn todo-item [{:keys [id name done]}]
+  [:li {:id (str "todo-" id)
+        :class (when done "completed")}
+   [:input.toggle {:hx-patch (str "/todos/" id)
+                   :type "checkbox"
+                   :checked done
+                   :hx-target (str "#todo-" id)
+                   :hx-swap "outerHTML"}]
+   [:label {:hx-get (str "/todos/edit/" id)
+            :hx-target (str "#todo-" id)
+            :hx-swap "outerHTML"} name]
+   [:button.destroy {:hx-delete (str "/todos/" id)
+                     :_ (str "on htmx:afterOnLoad remove #todo-" id)}]])
+
 (defn template [body & {:keys [code] :or {code 200}}]
   {:status code
    :body
@@ -19,7 +36,10 @@
       [:section.todoapp
        [:header.header
         [:h1 "todos"]
-        body]]]))})
+        body]
+       [:ul#todo-list.todo-list
+        (for [todo @todos]
+          (todo-item todo))]]]))})
 
 (defn home-page []
   [:form {:hx-post "/todos"
