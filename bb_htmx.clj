@@ -26,8 +26,8 @@
     [:button.destroy {:hx-delete (str "/todos/" id)
                       :_ (str "on htmx:afterOnLoad remove #todo-" id)}]]])
 
-(defn template [body & {:keys [code] :or {code 200}}]
-  {:status code
+(defn template [body]
+  {:status 200
    :body
    (str
     "<!DOCTYPE html>"
@@ -86,8 +86,6 @@
 (defn delete-item [id]
   (swap! todos (fn [x] (remove #(= (:id %) (Integer. id)) x))))
 
-(def not-found
-  [:p "Error 404: Page not found"])
 
 (defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
@@ -97,7 +95,7 @@
            [:post ["todos" "update" id]] {:body (update-item req id)}
            [:patch ["todos" id]] {:body (patch-item id)}
            [:delete ["todos" id]] {:body (delete-item id)}
-           :else (template not-found {:code 404}))))
+           :else {:status 404 :body "Error 404: Page not found"})))
 
 (srv/run-server #'routes {:port 3000})
 ;; @(promise)
