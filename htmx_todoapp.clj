@@ -70,7 +70,13 @@
         [:label {:for "toggle-all"} "Mark all as complete"]]
        [:ul#todo-list.todo-list
         (for [todo @todos]
-          (todo-item (val todo)))]]]))})
+          (todo-item (val todo)))]]
+      [:footer.info
+       [:p "Click to edit a todo"]
+       [:p "Craeated by "
+        [:a {:href "https://twitter.com/PrestanceDesign"} "Michaël Sλlihi"]]
+       [:p "Part of "
+        [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
 
 (defn add-item [req]
   (let [name (-> req
@@ -119,8 +125,9 @@
            [:delete ["todos" id]] {:body (delete-item id)}
            :else {:status 404 :body "Error 404: Page not found"})))
 
-(let [url (str "http://localhost:" port "/")]
-  (srv/run-server #'routes {:port port})
-  (println "serving" url)
-  (browse/browse-url url)
-  @(promise))
+(comment
+  (let [url (str "http://localhost:" port "/")]
+    (srv/run-server #'routes {:port port})
+    (println "serving" url)
+    (browse/browse-url url)
+    @(promise)))
