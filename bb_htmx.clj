@@ -78,6 +78,14 @@
     (swap! todos assoc-in [(dec (Integer. id)) :name] name)
     (h/html (todo-item (assoc todo :name name)))))
 
+(defn patch-item [id]
+  (let [todo (find-todo id @todos)]
+    (swap! todos update-in [(dec (Integer. id)) :done] not)
+    (h/html (todo-item (update todo :done not)))))
+
+(defn delete-item [id]
+  (swap! todos (fn [x] (remove #(= (:id %) (Integer. id)) x))))
+
 (def not-found
   [:p "Error 404: Page not found"])
 
@@ -87,6 +95,8 @@
            [:get []] (template (home-page))
            [:get ["todos" "edit" id]] {:body (edit-item id)}
            [:post ["todos" "update" id]] {:body (update-item req id)}
+           [:patch ["todos" id]] {:body (patch-item id)}
+           [:delete ["todos" id]] {:body (delete-item id)}
            :else (template not-found {:code 404}))))
 
 (srv/run-server #'routes {:port 3000})
