@@ -3,6 +3,8 @@
          '[clojure.string :as str]
          '[hiccup.core :as h])
 
+(import '[java.net URLDecoder])
+
 (def todos (atom [{:id 1 :name "Taste htmx" :done true}
                   {:id 2 :name "Buy a unicorn" :done false}]))
 
@@ -41,6 +43,9 @@
        [:header.header
         [:h1 "todos"]
         body]
+       [:section.main
+        [:input#toggle-all.toggle-all {:type "checkbox"}]
+        [:label {:for "toggle-all"} "Mark all as complete"]]
        [:ul#todo-list.todo-list
         (for [todo @todos]
           (todo-item todo))]]]))})
@@ -62,14 +67,26 @@
                     :name "name"
                     :value name}]])))
 
+(defn update-item [req id]
+  (let [todo (find-todo id @todos)
+        name (-> req
+                 :body
+                 slurp
+                 (str/split #"=")
+                 second
+                 URLDecoder/decode)]
+    (swap! todos assoc-in [(dec (Integer. id)) :name] name)
+    (h/html (todo-item (assoc todo :name name)))))
+
 (def not-found
   [:p "Error 404: Page not found"])
 
-(defn routes [{:keys [request-method uri]}]
+(defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
     (match [request-method path]
            [:get []] (template (home-page))
            [:get ["todos" "edit" id]] {:body (edit-item id)}
+           [:post ["todos" "update" id]] {:body (update-item req id)}
            :else (template not-found {:code 404}))))
 
 (srv/run-server #'routes {:port 3000})
