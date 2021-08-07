@@ -10,9 +10,10 @@ From their own web page:
 
 ## Run the application
 
-    $ git clone https://github.com/prestancedesign/babashka-htmx-todoapp
-    $ cd babashka-htmx-todoapp
+Clone this repo and run with Babashka:
 
-With Babashka installed, run:
+    git clone https://github.com/prestancedesign/babashka-htmx-todoapp
+    cd babashka-htmx-todoapp
+    bb htmx_todoapp.clj
 
-    $ bb htmx_todoapp.clj
+Your browser will prompt automatically to the url http://localhost:3000
