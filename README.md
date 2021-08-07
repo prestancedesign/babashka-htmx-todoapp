@@ -8,6 +8,8 @@ From their own web page:
 
 > htmx is small (~10k min.gz'd), dependency-free, extendable & IE11 compatible
 
+![Babashka Htmx](https://github.com/PrestanceDesign/babashka-htmx-todoapp/blob/master/cover.png)
+
 ## Run the application
 
 Clone this repo and run with Babashka:
