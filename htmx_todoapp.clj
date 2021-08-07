@@ -9,6 +9,7 @@
 (def port 3000)
 
 ;; Mimic DB (in-memeory)
+
 (def todos (atom (sorted-map 1 {:id 1 :name "Taste htmx with Babashka" :done true}
                              2 {:id 2 :name "Buy a unicorn" :done false})))
 
@@ -27,6 +28,9 @@
 (defn remove-todo! [id]
   (swap! todos dissoc (Integer. id)))
 
+(defn get-items-left []
+  (count (remove #(:done (val %)) @todos)))
+
 ;; Template and components
 
 (defn todo-item [{:keys [id name done]}]
@@ -43,6 +47,11 @@
              :hx-swap "outerHTML"} name]
     [:button.destroy {:hx-delete (str "/todos/" id)
                       :_ (str "on htmx:afterOnLoad remove #todo-" id)}]]])
+
+(defn item-count []
+  (let [items-left (get-items-left)]
+    [:span#todo-count.todo-count {:hx-swap-oob "true"}
+     [:strong items-left] " " (if (> items-left 1) "items" "item") " left"]))
 
 (defn template []
   {:status 200
@@ -73,7 +82,9 @@
         [:label {:for "toggle-all"} "Mark all as complete"]]
        [:ul#todo-list.todo-list
         (for [todo @todos]
-          (todo-item (val todo)))]]
+          (todo-item (val todo)))]
+       [:footer.footer
+        (item-count)]]
       [:footer.info
        [:p "Click to edit a todo"]
        [:p "Craeated by "
@@ -91,7 +102,8 @@
                  second
                  URLDecoder/decode)
         todo (add-todo! name)]
-    (h/html (todo-item (val (last todo))))))
+    (h/html (todo-item (val (last todo)))
+            (item-count))))
 
 (defn edit-item [id]
   (let [{:keys [id name]} (get @todos (Integer. id))]
@@ -114,10 +126,12 @@
 (defn patch-item
   [id]
   (let [todo (toggle-todo! id)]
-    (h/html (todo-item (get todo (Integer. id))))))
+    (h/html (todo-item (get todo (Integer. id)))
+            (item-count))))
 
 (defn delete-item [id]
-  (remove-todo! id))
+  (remove-todo! id)
+  (h/html (item-count)))
 
 ;; Routes
 
@@ -134,9 +148,8 @@
 
 ;; Server
 
-(comment
-  (let [url (str "http://localhost:" port "/")]
-    (srv/run-server #'routes {:port port})
-    (println "serving" url)
-    (browse/browse-url url)
-    @(promise)))
+(let [url (str "http://localhost:" port "/")]
+  (srv/run-server #'routes {:port port})
+  (println "serving" url)
+  (browse/browse-url url)
+  @(promise))
