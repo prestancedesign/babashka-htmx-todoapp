@@ -13,7 +13,7 @@
 (def port 3000)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Mimic DB (in-memeory)
+;; Mimic DB (in-memory)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def todos (atom (sorted-map 1 {:id 1 :name "Taste htmx with Babashka" :done true}
