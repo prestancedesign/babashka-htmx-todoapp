@@ -8,10 +8,14 @@
 
 (def port 3000)
 
+;; Mimic DB (in-memeory)
 (def todos (atom (sorted-map 1 {:id 1 :name "Taste htmx with Babashka" :done true}
                              2 {:id 2 :name "Buy a unicorn" :done false})))
 
 (def todos-id (atom (count @todos)))
+
+
+;; "DB" queries
 
 (defn add-todo! [name]
   (let [id (swap! todos-id inc)]
@@ -23,8 +27,7 @@
 (defn remove-todo! [id]
   (swap! todos dissoc (Integer. id)))
 
-(defn find-todo [id todos-list]
-  (first (filter #(= (Integer. id) (:id %)) todos-list)))
+;; Template and components
 
 (defn todo-item [{:keys [id name done]}]
   [:li {:id (str "todo-" id)
@@ -78,6 +81,8 @@
        [:p "Part of "
         [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
 
+;; Handlers
+
 (defn add-item [req]
   (let [name (-> req
                  :body
@@ -114,6 +119,8 @@
 (defn delete-item [id]
   (remove-todo! id))
 
+;; Routes
+
 (defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
     (match [request-method path]
@@ -124,6 +131,8 @@
            [:patch ["todos" id]] {:body (patch-item id)}
            [:delete ["todos" id]] {:body (delete-item id)}
            :else {:status 404 :body "Error 404: Page not found"})))
+
+;; Server
 
 (comment
   (let [url (str "http://localhost:" port "/")]
