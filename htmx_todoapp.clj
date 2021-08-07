@@ -6,17 +6,24 @@
 
 (import '[java.net URLDecoder])
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (def port 3000)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mimic DB (in-memeory)
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def todos (atom (sorted-map 1 {:id 1 :name "Taste htmx with Babashka" :done true}
                              2 {:id 2 :name "Buy a unicorn" :done false})))
 
 (def todos-id (atom (count @todos)))
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; "DB" queries
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn add-todo! [name]
   (let [id (swap! todos-id inc)]
@@ -31,7 +38,10 @@
 (defn get-items-left []
   (count (remove #(:done (val %)) @todos)))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template and components
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn todo-item [{:keys [id name done]}]
   [:li {:id (str "todo-" id)
@@ -92,7 +102,9 @@
        [:p "Part of "
         [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handlers
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn add-item [req]
   (let [name (-> req
@@ -133,7 +145,10 @@
   (remove-todo! id)
   (h/html (item-count)))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Routes
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
@@ -146,7 +161,9 @@
            [:delete ["todos" id]] {:body (delete-item id)}
            :else {:status 404 :body "Error 404: Page not found"})))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (let [url (str "http://localhost:" port "/")]
   (srv/run-server #'routes {:port port})
