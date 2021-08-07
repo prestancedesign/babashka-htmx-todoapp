@@ -138,7 +138,7 @@
 (defn edit-item [id]
   (let [{:keys [id name]} (get @todos (Integer. id))]
     (h/html
-     [:form {:hx-post (str"/todos/update/" id)}
+     [:form {:hx-post (str "/todos/update/" id)}
       [:input.edit {:type "text"
                     :name "name"
                     :value name}]])))
