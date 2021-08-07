@@ -38,6 +38,11 @@
 (defn get-items-left []
   (count (remove #(:done (val %)) @todos)))
 
+(defn todos-completed []
+  (count (filter #(:done (val %)) @todos)))
+
+(defn remove-all-completed-todo []
+  (reset! todos (into {} (remove #(:done (val %)) @todos))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template and components
@@ -58,10 +63,22 @@
     [:button.destroy {:hx-delete (str "/todos/" id)
                       :_ (str "on htmx:afterOnLoad remove #todo-" id)}]]])
 
+(defn todo-list []
+  (for [todo @todos]
+    (todo-item (val todo))))
+
 (defn item-count []
   (let [items-left (get-items-left)]
     [:span#todo-count.todo-count {:hx-swap-oob "true"}
      [:strong items-left] " " (if (> items-left 1) "items" "item") " left"]))
+
+(defn clear-completed-button []
+  [:button#clear-completed.clear-completed
+   {:hx-delete "/todos"
+    :hx-target "#todo-list"
+    :hx-swap-oob "true"
+    :class (when-not (pos? (todos-completed)) "hidden")}
+   "Clear completed"])
 
 (defn template []
   {:status 200
@@ -79,22 +96,23 @@
       [:section.todoapp
        [:header.header
         [:h1 "todos"]
-        [:form {:hx-post "/todos"
-                :hx-target "#todo-list"
-                :hx-swap "afterbegin"
-                :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
-         [:input#txtTodo.new-todo {:name "todo"
-                                   :placeholder "What needs to be done?"
-                                   :autofocus ""}]]]
+        [:form
+         {:hx-post "/todos"
+          :hx-target "#todo-list"
+          :hx-swap "afterbegin"
+          :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
+         [:input#txtTodo.new-todo
+          {:name "todo"
+           :placeholder "What needs to be done?"
+           :autofocus ""}]]]
        [:section.main
-
         [:input#toggle-all.toggle-all {:type "checkbox"}]
         [:label {:for "toggle-all"} "Mark all as complete"]]
        [:ul#todo-list.todo-list
-        (for [todo @todos]
-          (todo-item (val todo)))]
+        (todo-list)]
        [:footer.footer
-        (item-count)]]
+        (item-count)
+        (clear-completed-button)]]
       [:footer.info
        [:p "Click to edit a todo"]
        [:p "Craeated by "
@@ -135,16 +153,21 @@
         todo (swap! todos assoc-in [(Integer. id) :name] name)]
     (h/html (todo-item (get todo (Integer. id))))))
 
-(defn patch-item
-  [id]
+(defn patch-item [id]
   (let [todo (toggle-todo! id)]
     (h/html (todo-item (get todo (Integer. id)))
-            (item-count))))
+            (item-count)
+            (clear-completed-button))))
 
 (defn delete-item [id]
   (remove-todo! id)
   (h/html (item-count)))
 
+(defn clear-completed []
+  (remove-all-completed-todo)
+  (h/html (todo-list)
+          (item-count)
+          (clear-completed-button)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Routes
@@ -159,6 +182,7 @@
            [:post ["todos" "update" id]] {:body (update-item req id)}
            [:patch ["todos" id]] {:body (patch-item id)}
            [:delete ["todos" id]] {:body (delete-item id)}
+           [:delete ["todos"]] {:body (clear-completed)}
            :else {:status 404 :body "Error 404: Page not found"})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
