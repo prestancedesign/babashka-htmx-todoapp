@@ -18,4 +18,4 @@ Clone this repo and run with Babashka:
     cd babashka-htmx-todoapp
     bb htmx_todoapp.clj
 
-Your browser will prompt automatically to the url http://localhost:3000
+Your browser will launch automatically to the url http://localhost:3000
