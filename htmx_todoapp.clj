@@ -1,6 +1,7 @@
 (require '[org.httpkit.server :as srv]
          '[clojure.java.browse :as browse]
          '[clojure.core.match :refer [match]]
+         '[clojure.pprint :refer [cl-format]]
          '[clojure.string :as str]
          '[hiccup.core :as h])
 
@@ -70,7 +71,7 @@
 (defn item-count []
   (let [items-left (get-items-left)]
     [:span#todo-count.todo-count {:hx-swap-oob "true"}
-     [:strong items-left] " " (if (> items-left 1) "items" "item") " left"]))
+     [:strong items-left] " " (cl-format nil "item~p" items-left) " left"]))
 
 (defn clear-completed-button []
   [:button#clear-completed.clear-completed
