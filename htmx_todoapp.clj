@@ -121,16 +121,22 @@
         [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn parse-body [body]
+  (-> body
+      slurp
+      (str/split #"=")
+      second
+      URLDecoder/decode))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handlers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn add-item [req]
-  (let [name (-> req
-                 :body
-                 slurp
-                 (str/split #"=")
-                 second
-                 URLDecoder/decode)
+(defn add-item [{body :body}]
+  (let [name (parse-body body)
         todo (add-todo! name)]
     (h/html (todo-item (val (last todo)))
             (item-count))))
@@ -143,13 +149,8 @@
                     :name "name"
                     :value name}]])))
 
-(defn update-item [req id]
-  (let [name (-> req
-                 :body
-                 slurp
-                 (str/split #"=")
-                 second
-                 URLDecoder/decode)
+(defn update-item [{body :body} id]
+  (let [name (parse-body body)
         todo (swap! todos assoc-in [(Integer. id) :name] name)]
     (h/html (todo-item (get todo (Integer. id))))))
 
