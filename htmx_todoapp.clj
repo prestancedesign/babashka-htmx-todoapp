@@ -116,7 +116,7 @@
         (clear-completed-button)]]
       [:footer.info
        [:p "Click to edit a todo"]
-       [:p "Craeated by "
+       [:p "Created by "
         [:a {:href "https://twitter.com/PrestanceDesign"} "Michaël Sλlihi"]]
        [:p "Part of "
         [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
