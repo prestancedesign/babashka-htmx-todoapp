@@ -100,7 +100,7 @@
         [:form
          {:hx-post "/todos"
           :hx-target "#todo-list"
-          :hx-swap "afterbegin"
+          :hx-swap "beforeend"
           :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
          [:input#txtTodo.new-todo
           {:name "todo"
@@ -138,7 +138,8 @@
 
 (defn add-item [{body :body}]
   (let [name (parse-body body)
-        todo (add-todo! name)]
+        todo (add-todo! name)
+        _ (println (todo-item (val (last todo))))]
     (h/html (todo-item (val (last todo)))
             (item-count))))
 
