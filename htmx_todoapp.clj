@@ -138,8 +138,7 @@
 
 (defn add-item [{body :body}]
   (let [name (parse-body body)
-        todo (add-todo! name)
-        _ (println (todo-item (val (last todo))))]
+        todo (add-todo! name)]
     (h/html (todo-item (val (last todo)))
             (item-count))))
 
