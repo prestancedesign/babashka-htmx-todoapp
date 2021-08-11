@@ -36,6 +36,13 @@
 (defn remove-todo! [id]
   (swap! todos dissoc (Integer. id)))
 
+(defn filtered-todo [filter-name todos]
+  (case filter-name
+    "active" (remove #(:done (val %)) todos)
+    "completed" (filter #(:done (val %)) todos)
+    "all" todos
+    todos))
+
 (defn get-items-left []
   (count (remove #(:done (val %)) @todos)))
 
@@ -64,8 +71,8 @@
     [:button.destroy {:hx-delete (str "/todos/" id)
                       :_ (str "on htmx:afterOnLoad remove #todo-" id)}]]])
 
-(defn todo-list []
-  (for [todo @todos]
+(defn todo-list [todos]
+  (for [todo todos]
     (todo-item (val todo))))
 
 (defn todo-edit [id name]
@@ -77,7 +84,20 @@
 (defn item-count []
   (let [items-left (get-items-left)]
     [:span#todo-count.todo-count {:hx-swap-oob "true"}
-     [:strong items-left] " " (cl-format nil "item~p" items-left) " left"]))
+     [:strong items-left] (cl-format nil " item~p " items-left) "left"]))
+
+(defn todo-filters [filter]
+  [:ul.filters
+   [:li
+    [:a {:hx-get "/?filter=all"
+         :hx-target "#todo-list"
+         :class (when (= filter "all") "selected")} "All"]
+    [:a {:hx-get "/?filter=active"
+         :hx-target "#todo-list"
+         :class (when (= filter "active") "selected")} "Active"]
+    [:a {:hx-get "/?filter=completed"
+         :hx-target "#todo-list"
+         :class (when (= filter "completed") "selected")} "Completed"]]])
 
 (defn clear-completed-button []
   [:button#clear-completed.clear-completed
@@ -87,45 +107,44 @@
     :class (when-not (pos? (todos-completed)) "hidden")}
    "Clear completed"])
 
-(defn template []
-  {:status 200
-   :body
-   (str
-    "<!DOCTYPE html>"
-    (h/html
-     [:head
-      [:meta {:charset "UTF-8"}]
-      [:title "Htmx + Babashka"]
-      [:link {:href "https://unpkg.com/todomvc-app-css@2.4.1/index.css" :rel "stylesheet"}]
-      [:script {:src "https://unpkg.com/htmx.org@1.5.0/dist/htmx.min.js" :defer true}]
-      [:script {:src "https://unpkg.com/hyperscript.org@0.8.1/dist/_hyperscript.min.js" :defer true}]]
-     [:body
-      [:section.todoapp
-       [:header.header
-        [:h1 "todos"]
-        [:form
-         {:hx-post "/todos"
-          :hx-target "#todo-list"
-          :hx-swap "beforeend"
-          :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
-         [:input#txtTodo.new-todo
-          {:name "todo"
-           :placeholder "What needs to be done?"
-           :autofocus ""}]]]
-       [:section.main
-        [:input#toggle-all.toggle-all {:type "checkbox"}]
-        [:label {:for "toggle-all"} "Mark all as complete"]]
-       [:ul#todo-list.todo-list
-        (todo-list)]
-       [:footer.footer
-        (item-count)
-        (clear-completed-button)]]
-      [:footer.info
-       [:p "Click to edit a todo"]
-       [:p "Created by "
-        [:a {:href "https://twitter.com/PrestanceDesign"} "Michaël Sλlihi"]]
-       [:p "Part of "
-        [:a {:href "http://todomvc.com"} "TodoMVC"]]]]))})
+(defn template [filter]
+  (str
+   "<!DOCTYPE html>"
+   (h/html
+    [:head
+     [:meta {:charset "UTF-8"}]
+     [:title "Htmx + Babashka"]
+     [:link {:href "https://unpkg.com/todomvc-app-css@2.4.1/index.css" :rel "stylesheet"}]
+     [:script {:src "https://unpkg.com/htmx.org@1.5.0/dist/htmx.min.js" :defer true}]
+     [:script {:src "https://unpkg.com/hyperscript.org@0.8.1/dist/_hyperscript.min.js" :defer true}]]
+    [:body
+     [:section.todoapp
+      [:header.header
+       [:h1 "todos"]
+       [:form
+        {:hx-post "/todos"
+         :hx-target "#todo-list"
+         :hx-swap "beforeend"
+         :_ "on htmx:afterOnLoad set #txtTodo.value to ''"}
+        [:input#txtTodo.new-todo
+         {:name "todo"
+          :placeholder "What needs to be done?"
+          :autofocus ""}]]]
+      [:section.main
+       [:input#toggle-all.toggle-all {:type "checkbox"}]
+       [:label {:for "toggle-all"} "Mark all as complete"]]
+      [:ul#todo-list.todo-list
+       (todo-list (filtered-todo filter @todos))]
+      [:footer.footer
+       (item-count)
+       (todo-filters filter)
+       (clear-completed-button)]]
+     [:footer.info
+      [:p "Click to edit a todo"]
+      [:p "Created by "
+       [:a {:href "https://twitter.com/PrestanceDesign"} "Michaël Sλlihi"]]
+      [:p "Part of "
+       [:a {:href "http://todomvc.com"} "TodoMVC"]]]])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -138,9 +157,21 @@
       second
       URLDecoder/decode))
 
+(defn parse-query-string [query-string]
+  (when query-string
+    (-> query-string
+        (str/split #"=")
+        second)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handlers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn app-index [{query-string :query-string}]
+  (let [filter (parse-query-string query-string)]
+    (if filter
+      (h/html (todo-list (filtered-todo filter @todos)))
+      (template filter))))
 
 (defn add-item [{body :body}]
   (let [name (parse-body body)
@@ -180,7 +211,7 @@
 (defn routes [{:keys [request-method uri] :as req}]
   (let [path (vec (rest (str/split uri #"/")))]
     (match [request-method path]
-           [:get []] (template)
+           [:get []] {:body (app-index req)}
            [:get ["todos" "edit" id]] {:body (edit-item id)}
            [:post ["todos"]] {:body (add-item req)}
            [:post ["todos" "update" id]] {:body (update-item req id)}
