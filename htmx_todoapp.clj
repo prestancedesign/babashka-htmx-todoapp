@@ -68,6 +68,12 @@
   (for [todo @todos]
     (todo-item (val todo))))
 
+(defn todo-edit [id name]
+  [:form {:hx-post (str "/todos/update/" id)}
+   [:input.edit {:type "text"
+                 :name "name"
+                 :value name}]])
+
 (defn item-count []
   (let [items-left (get-items-left)]
     [:span#todo-count.todo-count {:hx-swap-oob "true"}
@@ -144,11 +150,7 @@
 
 (defn edit-item [id]
   (let [{:keys [id name]} (get @todos (Integer. id))]
-    (h/html
-     [:form {:hx-post (str "/todos/update/" id)}
-      [:input.edit {:type "text"
-                    :name "name"
-                    :value name}]])))
+    (h/html (todo-edit id name))))
 
 (defn update-item [{body :body} id]
   (let [name (parse-body body)
