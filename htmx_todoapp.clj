@@ -87,17 +87,16 @@
      [:strong items-left] (cl-format nil " item~p " items-left) "left"]))
 
 (defn todo-filters [filter]
-  [:ul.filters
-   [:li
-    [:a {:hx-get "/?filter=all"
-         :hx-target "#todo-list"
-         :class (when (= filter "all") "selected")} "All"]
-    [:a {:hx-get "/?filter=active"
-         :hx-target "#todo-list"
-         :class (when (= filter "active") "selected")} "Active"]
-    [:a {:hx-get "/?filter=completed"
-         :hx-target "#todo-list"
-         :class (when (= filter "completed") "selected")} "Completed"]]])
+  [:ul#filters.filters {:hx-swap-oob "true"}
+   [:li [:a {:hx-get "/?filter=all"
+             :hx-target "#todo-list"
+             :class (when (= filter "all") "selected")} "All"]]
+   [:li [:a {:hx-get "/?filter=active"
+             :hx-target "#todo-list"
+             :class (when (= filter "active") "selected")} "Active"]]
+   [:li [:a {:hx-get "/?filter=completed"
+             :hx-target "#todo-list"
+             :class (when (= filter "completed") "selected")} "Completed"]]])
 
 (defn clear-completed-button []
   [:button#clear-completed.clear-completed
@@ -170,7 +169,8 @@
 (defn app-index [{query-string :query-string}]
   (let [filter (parse-query-string query-string)]
     (if filter
-      (h/html (todo-list (filtered-todo filter @todos)))
+      (h/html (todo-list (filtered-todo filter @todos))
+              (todo-filters filter))
       (template filter))))
 
 (defn add-item [{body :body}]
