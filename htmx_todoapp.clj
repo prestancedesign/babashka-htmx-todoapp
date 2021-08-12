@@ -200,7 +200,7 @@
 
 (defn clear-completed []
   (remove-all-completed-todo)
-  (h/html (todo-list)
+  (h/html (todo-list @todos)
           (item-count)
           (clear-completed-button)))
 
