@@ -89,12 +89,15 @@
 (defn todo-filters [filter]
   [:ul#filters.filters {:hx-swap-oob "true"}
    [:li [:a {:hx-get "/?filter=all"
+             :hx-push-url "true"
              :hx-target "#todo-list"
              :class (when (= filter "all") "selected")} "All"]]
    [:li [:a {:hx-get "/?filter=active"
+             :hx-push-url "true"
              :hx-target "#todo-list"
              :class (when (= filter "active") "selected")} "Active"]]
    [:li [:a {:hx-get "/?filter=completed"
+             :hx-push-url "true"
              :hx-target "#todo-list"
              :class (when (= filter "completed") "selected")} "Completed"]]])
 
@@ -103,6 +106,7 @@
    {:hx-delete "/todos"
     :hx-target "#todo-list"
     :hx-swap-oob "true"
+    :hx-push-url "/"
     :class (when-not (pos? (todos-completed)) "hidden")}
    "Clear completed"])
 
@@ -166,9 +170,10 @@
 ;; Handlers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn app-index [{query-string :query-string}]
-  (let [filter (parse-query-string query-string)]
-    (if filter
+(defn app-index [{:keys [query-string headers]}]
+  (let [filter (parse-query-string query-string)
+        ajax-request? (get headers "hx-request")]
+    (if (and filter ajax-request?)
       (h/html (todo-list (filtered-todo filter @todos))
               (todo-filters filter))
       (template filter))))
