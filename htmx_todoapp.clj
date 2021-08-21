@@ -229,8 +229,9 @@
 ;; Server
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(let [url (str "http://localhost:" port "/")]
-  (srv/run-server #'routes {:port port})
-  (println "serving" url)
-  (browse/browse-url url)
-  @(promise))
+(when-not (System/getenv "dev")
+  (let [url (str "http://localhost:" port "/")]
+    (srv/run-server #'routes {:port port})
+    (println "serving" url)
+    (browse/browse-url url)
+    @(promise)))
