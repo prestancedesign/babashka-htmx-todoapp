@@ -229,7 +229,7 @@
 ;; Server
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(when-not (System/getenv "dev")
+(when (= *file* (System/getProperty "babashka.file"))
   (let [url (str "http://localhost:" port "/")]
     (srv/run-server #'routes {:port port})
     (println "serving" url)
