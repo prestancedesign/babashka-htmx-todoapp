@@ -30,6 +30,9 @@
   (let [id (swap! todos-id inc)]
     (swap! todos assoc id {:id id :name name :done false})))
 
+(defn update-todo! [id name]
+  (swap! todos assoc-in [(Integer. id) :name] name))
+
 (defn toggle-todo! [id]
   (swap! todos update-in [(Integer. id) :done] not))
 
@@ -190,7 +193,7 @@
 
 (defn update-item [{body :body} id]
   (let [name (parse-body body)
-        todo (swap! todos assoc-in [(Integer. id) :name] name)]
+        todo (update-todo! id name)]
     (h/html (todo-item (get todo (Integer. id))))))
 
 (defn patch-item [id]
