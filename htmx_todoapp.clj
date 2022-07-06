@@ -1,6 +1,11 @@
+#!/usr/bin/env bb
+
+(require '[babashka.deps :as deps])
+(deps/add-deps '{:deps {org.clojars.askonomm/ruuter {:mvn/version "1.2.2"}}})
+
 (require '[org.httpkit.server :as srv]
          '[clojure.java.browse :as browse]
-         '[clojure.core.match :refer [match]]
+         '[ruuter.core :as ruuter]
          '[clojure.pprint :refer [cl-format]]
          '[clojure.string :as str]
          '[hiccup.core :as h])
@@ -79,7 +84,7 @@
     (todo-item (val todo))))
 
 (defn todo-edit [id name]
-  [:form {:hx-post (str "/todos/update/" id)}
+  [:form {:hx-patch (str "/todos/update/" id)}
    [:input.edit {:type "text"
                  :name "name"
                  :value name}]])
@@ -114,7 +119,7 @@
    "Clear completed"])
 
 (defn template [filter]
-  (str
+  (list
    "<!DOCTYPE html>"
    (h/html
     [:head
@@ -173,60 +178,74 @@
 ;; Handlers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn render [handler & [status]]
+  {:status (or status 200)
+   :body (h/html handler)})
+
 (defn app-index [{:keys [query-string headers]}]
   (let [filter (parse-query-string query-string)
         ajax-request? (get headers "hx-request")]
     (if (and filter ajax-request?)
-      (h/html (todo-list (filtered-todo filter @todos))
-              (todo-filters filter))
-      (template filter))))
+      (render (list (todo-list (filtered-todo filter @todos))
+                    (todo-filters filter)))
+      (render (template filter)))))
 
 (defn add-item [{body :body}]
   (let [name (parse-body body)
         todo (add-todo! name)]
-    (h/html (todo-item (val (last todo)))
-            (item-count))))
+    (render (list (todo-item (val (last todo)))
+                  (item-count)))))
 
-(defn edit-item [id]
+(defn edit-item [{{id :id} :params}]
   (let [{:keys [id name]} (get @todos (Integer. id))]
-    (h/html (todo-edit id name))))
+    (render (todo-edit id name))))
 
-(defn update-item [{body :body} id]
+(defn update-item [{{id :id} :params body :body}]
   (let [name (parse-body body)
         todo (update-todo! id name)]
-    (h/html (todo-item (get todo (Integer. id))))))
+    (render (todo-item (get todo (Integer. id))))))
 
-(defn patch-item [id]
+(defn patch-item [{{id :id} :params}]
   (let [todo (toggle-todo! id)]
-    (h/html (todo-item (get todo (Integer. id)))
-            (item-count)
-            (clear-completed-button))))
+    (render (list (todo-item (get todo (Integer. id)))
+                  (item-count)
+                  (clear-completed-button)))))
 
-(defn delete-item [id]
+(defn delete-item [{{id :id} :params}]
   (remove-todo! id)
-  (h/html (item-count)))
+  (render (item-count)))
 
-(defn clear-completed []
+(defn clear-completed [_]
   (remove-all-completed-todo)
-  (h/html (todo-list @todos)
-          (item-count)
-          (clear-completed-button)))
+  (render (list (todo-list @todos)
+                (item-count)
+                (clear-completed-button))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Routes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn routes [{:keys [request-method uri] :as req}]
-  (let [path (vec (rest (str/split uri #"/")))]
-    (match [request-method path]
-           [:get []] {:body (app-index req)}
-           [:get ["todos" "edit" id]] {:body (edit-item id)}
-           [:post ["todos"]] {:body (add-item req)}
-           [:post ["todos" "update" id]] {:body (update-item req id)}
-           [:patch ["todos" id]] {:body (patch-item id)}
-           [:delete ["todos" id]] {:body (delete-item id)}
-           [:delete ["todos"]] {:body (clear-completed)}
-           :else {:status 404 :body "Error 404: Page not found"})))
+(def routes [{:path     "/"
+              :method   :get
+              :response app-index}
+             {:path     "/todos/edit/:id"
+              :method   :get
+              :response edit-item}
+             {:path     "/todos"
+              :method   :post
+              :response add-item}
+             {:path     "/todos/update/:id"
+              :method   :patch
+              :response update-item}
+             {:path     "/todos/:id"
+              :method   :patch
+              :response patch-item}
+             {:path     "/todos/:id"
+              :method   :delete
+              :response delete-item}
+             {:path     "/todos"
+              :method   :delete
+              :response clear-completed}])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server
@@ -234,7 +253,7 @@
 
 (when (= *file* (System/getProperty "babashka.file"))
   (let [url (str "http://localhost:" port "/")]
-    (srv/run-server #'routes {:port port})
+    (srv/run-server #(ruuter/route routes %) {:port port})
     (println "serving" url)
     (browse/browse-url url)
     @(promise)))
