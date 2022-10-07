@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 
 (require '[babashka.deps :as deps])
-(deps/add-deps '{:deps {org.clojars.askonomm/ruuter {:mvn/version "1.2.2"}}})
+(deps/add-deps '{:deps {org.clojars.askonomm/ruuter {:mvn/version "1.3.2"}}})
 
 (require '[org.httpkit.server :as srv]
          '[clojure.java.browse :as browse]
